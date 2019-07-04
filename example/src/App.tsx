@@ -1,6 +1,5 @@
-import {Component,Provide,Vue, Watch, Model, Prop} from 'vue-property-decorator';
+import {Component,Vue} from 'vue-property-decorator';
 import virtualList from '../../'
-console.log(virtualList)
 @Component({
   components: {
     virtualList

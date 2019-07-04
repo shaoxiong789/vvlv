@@ -17,29 +17,52 @@ npm install --save vue-virtual-list
 ## Usage
 
 ```javascript
-import React from 'react';
-import { VirtualList } from 'vist';
+import {Component,Vue} from 'vue-property-decorator';
+import virtualList from '../../'
+@Component({
+  components: {
+    virtualList
+  }
+})
+export default class App extends Vue {
 
-class App extends Component {
-  constructor(props) {
-    super(props);
+  data:Array<any> = [];
 
-    const data = new Array(5000).fill(0).map((_, i) => i);
-
-    this.state = {
-      data: of(data)
-    };
+  mounted() {
+    fetch('https://jsonplaceholder.typicode.com/photos')
+      .then(res => res.json())
+      .then(data => this.data = data)
+      .catch(console.error);
   }
 
   render() {
     return (
-      <VirtualList
-        data$={this.state.data}
-        options$={of({ height: 60 })}
-        style={{ height: 400, border: '1px solid black' }}>
-        {(item, index) => <p style={{ height: 59, margin: 0, borderBottom: '1px solid green' }}>No. {index} - {item}</p>}
-      </VirtualList>
-    );
+      <div class="virtual-box">
+        <virtual-list style="height: 100%;"
+          list={this.data} options={{ height: 180 }}
+            {...{
+              scopedSlots: {
+                default: item => {
+                  return (
+                    <div class="card" style="height: 180px;">
+                      <a href={item.url}>
+                        <div class="thumbnail">
+                          <img src={item.thumbnailUrl} alt={item.title}/>
+                        </div>
+                        <div class="content">
+                          <p>{item.title}</p>
+                          <p>No.{item.id}</p>
+                        </div>
+                      </a>
+                    </div>
+                  )
+                }
+              }
+            }}
+          >
+        </virtual-list>
+      </div>
+    )
   }
 }
 ```
@@ -48,8 +71,8 @@ class App extends Component {
 
 | Property   | Type                              | Description                     |
 | ---------- | --------------------------------- | ------------------------------- |
-| `data$`    | `Observable<any>`                 | Data source of the list.        |
-| `options$` | `Observable<IVirtualListOptions>` | Options of the virtual list.    |
+| `list`    | `Array<any>`                       | Data source of the list.        |
+| `options` | `IVirtualListOptions`              | Options of the virtual list.    |
 | `style`    | `any`                             | Style of VirtualList container. |
 
 ### `IVirtualListOptions`
@@ -57,11 +80,6 @@ class App extends Component {
 | Property     | Type      | Default      | Description                                                                                                     |
 | ------------ | --------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
 | `height`     | `number`  | **NOT NULL** | Item height, it's **necessary**, vist use this property to calculate how many rows should be rendered actually. |
-| `spare`      | `number`  | 3            | Spare rows out of the view.                                                                                     |
-| `sticky`     | `boolean` | true         | Whether the scrollTop need to stick to the container's top when the data is changed or not.                     |
-| `startIndex` | `number`  | 0            | To indicate this start index of the list, and the list will scroll to this start index position when mounted.   |
-| `resize`     | `boolean` | true         | To mark if the real dom number should be recomputed when the window resize.                                     |
-
 ## License
 
-MIT © [musicq](https://github.com/musicq)
+MIT © [shaoxiong789](https://github.com/shaoxiong789)
