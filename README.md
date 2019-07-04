@@ -2,8 +2,6 @@
 
 > Virtual-list component build with react and rxjs
 
-[![NPM](https://img.shields.io/npm/v/vist.svg)](https://www.npmjs.com/package/vist)
-
 ## Selling Point
 
 virtualList won't create or remove any DOM when you scroll the list, it will reuse the existing DOM and only change their position and data. But when you resize your window, you'll find the DOM's number is changed, so your virtual list will always have just right number of DOM.
