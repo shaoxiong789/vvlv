@@ -79,7 +79,7 @@ export default class App extends Vue {
 
 | Property     | Type      | Default      | Description                                                                                                     |
 | ------------ | --------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
-| `height`     | `number`  | **NOT NULL** | Item height, it's **necessary**, vist use this property to calculate how many rows should be rendered actually. |
+| `height`     | `number`  | **NOT NULL** | Item height, it's **necessary**, use this property to calculate how many rows should be rendered actually. |
 ## License
 
 MIT © [shaoxiong789](https://github.com/shaoxiong789)
