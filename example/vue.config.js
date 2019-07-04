@@ -31,6 +31,10 @@ module.exports = {
     }
   },
 
+  publicPath: process.env.NODE_ENV === 'production'
+    ? './'
+    : '/',
+
   // 默认在生成的静态资源文件名中包含hash以控制缓存
   filenameHashing: true,
 
