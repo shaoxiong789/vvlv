@@ -1,4 +1,4 @@
-# vist
+# vue-virtual-list
 
 > Virtual-list component build with react and rxjs
 
@@ -11,7 +11,7 @@ Vist won't create or remove any DOM when you scroll the list, it will reuse the 
 ## Install
 
 ```bash
-npm install --save vist
+npm install --save vue-virtual-list
 ```
 
 ## Usage

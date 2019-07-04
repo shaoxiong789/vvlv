@@ -1,8 +1,8 @@
 {
   "name": "vue-virtual-list",
-  "version": "0.2.6",
+  "version": "0.0.1",
   "description": "Virtual-list component build with vue and rxjs",
-  "author": "musicq",
+  "author": "sxd",
   "license": "MIT",
   "repository": "shaoxiong789/vue-virtual-list",
   "main": "dist/index.js",
