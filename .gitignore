@@ -1,0 +1,11 @@
+# Logs
+*.log
+
+# IDE
+.idea
+.vscode
+
+# dependencies
+node_modules
+
+example/build

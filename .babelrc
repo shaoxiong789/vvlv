@@ -1,0 +1,5 @@
+{
+  "presets": [
+  ],
+  "plugins": ["external-helpers", "transform-vue-jsx", "jsx-v-model", "transform-decorators-legacy"]
+}
