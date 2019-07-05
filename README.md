@@ -1,6 +1,6 @@
-# vue-virtual-list
+# vvlv
 
-> Virtual-list component build with react and rxjs
+> vvlv component build with react and rxjs
 
 ## Selling Point
 
@@ -9,14 +9,14 @@ virtualList won't create or remove any DOM when you scroll the list, it will reu
 ## Install
 
 ```bash
-npm install --save vue-virtual-list
+npm install --save vvlv
 ```
 
 ## Usage
 
 ```javascript
 import {Component,Vue} from 'vue-property-decorator';
-import virtualList from '../../'
+import virtualList from 'vvlv'
 @Component({
   components: {
     virtualList

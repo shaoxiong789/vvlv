@@ -12,7 +12,7 @@
     "importHelpers": true,
     "experimentalDecorators": true,
     // 定义一个变量就必须给它一个初始值
-    "strictPropertyInitialization" : false,
+    "strictPropertyInitialization" : true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "node",

@@ -1,10 +1,10 @@
 {
-  "name": "vue-virtual-list",
+  "name": "vvlv",
   "version": "0.0.1",
   "description": "Virtual-list component build with vue and rxjs",
   "author": "sxd",
   "license": "MIT",
-  "repository": "shaoxiong789/vue-virtual-list",
+  "repository": "shaoxiong789/vvlv",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "jsnext:main": "dist/index.es.js",
