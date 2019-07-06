@@ -114,9 +114,6 @@ export default class VirtualList extends Vue {
       }),
       distinctUntilChanged(),
       throttleTime(50), // 截流防抖
-      tap((y) => {
-        console.log(y)
-      }),
       startWith(0)
     )
 

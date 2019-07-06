@@ -108,9 +108,7 @@ var VirtualList = /** @class */function (_super) {
             var y = _a.y;
             return -y;
         }), operators.distinctUntilChanged(), operators.throttleTime(50), // 截流防抖
-        operators.tap(function (y) {
-            console.log(y);
-        }), operators.startWith(0));
+        operators.startWith(0));
         // // 滚动事件发射
         // const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
         //   map(() => virtualListElm.scrollTop),

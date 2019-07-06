@@ -1,6 +1,6 @@
 {
   "name": "vvlv",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Virtual-list component build with vue and rxjs",
   "author": "sxd",
   "license": "MIT",
