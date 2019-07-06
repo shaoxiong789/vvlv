@@ -22,28 +22,23 @@ and limitations under the License.
 ***************************************************************************** */
 /* global Reflect, Promise */
 
-var extendStatics = function (d, b) {
-    extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function (d, b) {
-        d.__proto__ = b;
-    } || function (d, b) {
-        for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    };
+var extendStatics = function(d, b) {
+    extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
     return extendStatics(d, b);
 };
 
 function __extends(d, b) {
     extendStatics(d, b);
-    function __() {
-        this.constructor = d;
-    }
+    function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 }
 
 function __decorate(decorators, target, key, desc) {
-    var c = arguments.length,
-        r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
-        d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 }
 
@@ -64,6 +59,8 @@ var VirtualList = /** @class */function (_super) {
         _this.subscription = new rxjs.Subscription();
         _this.stateDataSnapshot = [];
         _this.lastFirstIndex = -1;
+        // snapshot of actualRows
+        _this.actualRowsSnapshot = 0;
         return _this;
     }
     VirtualList.prototype.listChange = function () {
@@ -82,6 +79,18 @@ var VirtualList = /** @class */function (_super) {
         var options$ = rxjs.of(this.options);
         var virtualListElm = this.virtualListRef.elm;
         this.containerHeight$.next(virtualListElm.clientHeight);
+        // window resize
+        this.subscription.add(rxjs.fromEvent(window, 'resize').pipe(operators.withLatestFrom(options$), operators.map(function (_a) {
+            var options = _a[1];
+            options.resize = options.resize === undefined;
+            return options;
+        }), operators.skipWhile(function (options) {
+            return !!!options.resize;
+        }),
+        // startWith(null),
+        operators.debounceTime(200)).subscribe(function () {
+            _this.containerHeight$.next(virtualListElm.clientHeight);
+        }));
         // 滚动事件发射
         var scrollWin$ = rxjs.fromEvent(virtualListElm, 'scroll').pipe(operators.map(function () {
             return virtualListElm.scrollTop;
@@ -143,8 +152,8 @@ var VirtualList = /** @class */function (_super) {
         var actualRows$ = rxjs.combineLatest(this.containerHeight$, options$).pipe(operators.map(function (_a) {
             var ch = _a[0],
                 option = _a[1];
-            return Math.ceil(ch / option.height) + 3;
-        }));
+            return Math.ceil(ch / option.height) + (option.spare || 1);
+        }), operators.tap(function (count) {}));
         var shouldUpdate$ = rxjs.combineLatest(scrollWin$.pipe(operators.map(function (scrollTop) {
             return scrollTop;
         })), this.list$, options$, actualRows$).pipe(
@@ -161,8 +170,9 @@ var VirtualList = /** @class */function (_super) {
         }),
         // 如果索引有改变，才触发重新 render
         operators.filter(function (_a) {
-            var curIndex = _a[0];
-            return curIndex !== _this.lastFirstIndex;
+            var curIndex = _a[0],
+                actualRows = _a[1];
+            return curIndex !== _this.lastFirstIndex || actualRows !== _this.actualRowsSnapshot;
         }),
         // update the index
         operators.tap(function (_a) {
@@ -175,16 +185,20 @@ var VirtualList = /** @class */function (_super) {
             return [firstIndex, lastIndex];
         }));
         // 计算当前需要的数据区块
-        var dataInViewSlice$ = rxjs.combineLatest(this.list$, options$, shouldUpdate$).pipe(operators.withLatestFrom(scrollDirection$), operators.map(function (_a) {
+        var dataInViewSlice$ = rxjs.combineLatest(this.list$, options$, shouldUpdate$).pipe(operators.withLatestFrom(scrollDirection$, actualRows$), operators.map(function (_a) {
             var _b = _a[0],
                 list = _b[0],
                 height = _b[1].height,
                 _c = _b[2],
                 firstIndex = _c[0],
                 lastIndex = _c[1],
-                dir = _a[1];
+                dir = _a[1],
+                actualRows = _a[2];
             var dataSlice = _this.stateDataSnapshot;
-            if (!dataSlice.length) {
+            if (!dataSlice.length || actualRows !== _this.actualRowsSnapshot) {
+                if (actualRows !== _this.actualRowsSnapshot) {
+                    _this.actualRowsSnapshot = actualRows;
+                }
                 return _this.stateDataSnapshot = list.slice(firstIndex, lastIndex + 1).map(function (item) {
                     return {
                         origin: item,

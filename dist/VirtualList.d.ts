@@ -2,6 +2,8 @@ import { Vue } from 'vue-property-decorator';
 import { VNode, CreateElement } from 'vue';
 interface IVirtualListOptions {
     height: number;
+    spare: number;
+    resize?: boolean;
 }
 export default class VirtualList extends Vue {
     list: Array<any>;
@@ -20,6 +22,7 @@ export default class VirtualList extends Vue {
     private virtualListRef;
     private stateDataSnapshot;
     private lastFirstIndex;
+    private actualRowsSnapshot;
     listChange(): void;
     mounted(): void;
     private getDifferenceIndexes;
