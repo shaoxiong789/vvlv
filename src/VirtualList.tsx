@@ -1,10 +1,12 @@
 import {Component,Vue, Watch, Prop} from 'vue-property-decorator';
 import {of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest } from 'rxjs'
-import { map, tap, startWith, filter, withLatestFrom, pairwise } from 'rxjs/operators'
+import { map, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise } from 'rxjs/operators'
 import { VNode, CreateElement } from 'vue';
 
 interface IVirtualListOptions {
   height: number
+  spare: number
+  resize?: boolean 
 }
 
 @Component({})
@@ -43,6 +45,10 @@ export default class VirtualList extends Vue {
 
   private lastFirstIndex = -1
 
+  // snapshot of actualRows
+  private actualRowsSnapshot: number = 0;
+
+
   @Watch('list', {
     deep: true
   })
@@ -71,6 +77,24 @@ export default class VirtualList extends Vue {
     const virtualListElm = this.virtualListRef.elm as HTMLElement;
 
     this.containerHeight$.next(virtualListElm.clientHeight)
+
+    // window resize
+    this.subscription.add(
+      fromEvent(window, 'resize')
+        .pipe(
+          withLatestFrom(options$),
+          map(([,options]) => {
+            options.resize = options.resize === undefined
+            return options
+          }),
+          skipWhile((options) => !!!options.resize),
+          // startWith(null),
+          debounceTime(200)
+        )
+        .subscribe(() => {
+          this.containerHeight$.next(virtualListElm.clientHeight)
+        })
+    );
 
     // 滚动事件发射
     const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
@@ -138,7 +162,9 @@ export default class VirtualList extends Vue {
     
     // 根据容器高度与给定的 item 高度，计算出实际应创建的 行数量
     const actualRows$ = combineLatest(this.containerHeight$, options$).pipe(
-      map(([ch, option]) => Math.ceil(ch / option.height) + 3)
+      map(([ch, option]) => Math.ceil(ch / option.height) + (option.spare || 1)),
+      tap((count) => {
+      })
     )
 
     const shouldUpdate$ = combineLatest(
@@ -155,7 +181,7 @@ export default class VirtualList extends Vue {
         return [firstIndex > maxIndex ? maxIndex : firstIndex, actualRows];
       }),
       // 如果索引有改变，才触发重新 render
-      filter(([curIndex]) => curIndex !== this.lastFirstIndex),
+      filter(([curIndex, actualRows]) => curIndex !== this.lastFirstIndex || (actualRows !== this.actualRowsSnapshot)),
       // update the index
       tap(([curIndex]) => this.lastFirstIndex = curIndex),
       map(([firstIndex, actualRows]) => {
@@ -170,10 +196,14 @@ export default class VirtualList extends Vue {
       options$,
       shouldUpdate$
     ).pipe(
-      withLatestFrom(scrollDirection$),
-      map(([[list, { height }, [firstIndex, lastIndex]], dir]) => {
+      withLatestFrom(scrollDirection$, actualRows$),
+      map(([[list, { height }, [firstIndex, lastIndex]], dir, actualRows]) => {
         const dataSlice = this.stateDataSnapshot
-        if (!dataSlice.length) {
+        if (!dataSlice.length || actualRows !== this.actualRowsSnapshot) {
+          if (actualRows !== this.actualRowsSnapshot) {
+            this.actualRowsSnapshot = actualRows;
+          }
+
           return this.stateDataSnapshot = list.slice(firstIndex, lastIndex + 1).map(item => ({
             origin: item,
             $pos: firstIndex * height,

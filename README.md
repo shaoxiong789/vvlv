@@ -1,6 +1,6 @@
 # vvlv
 
-> vvlv component build with react and rxjs
+> vvlv component build with vue and rxjs
 
 ## Selling Point
 
@@ -78,6 +78,8 @@ export default class App extends Vue {
 | Property     | Type      | Default      | Description                                                                                                     |
 | ------------ | --------- | ------------ | --------------------------------------------------------------------------------------------------------------- |
 | `height`     | `number`  | **NOT NULL** | Item height, it's **necessary**, use this property to calculate how many rows should be rendered actually. |
+| `spare`      | `number`  | 3            | Spare rows out of the view.                                                                                     |
+| `resize`     | `boolean` | true         | To mark if the real dom number should be recomputed when the window resize.                                     |
 ## License
 
 MIT © [shaoxiong789](https://github.com/shaoxiong789)

@@ -5,7 +5,9 @@
   "private": true,
   "dependencies": {
     "prop-types": "^15.6.2",
-    "rxjs": "^6.3.3"
+    "rxjs": "^6.3.3",
+    "vue": "^2.6.10",
+    "vue-property-decorator": "^8.2.1"
   },
   "devDependencies": {
     "@babel/plugin-syntax-dynamic-import": "^7.2.0",
@@ -17,6 +19,7 @@
     "@vue/eslint-config-typescript": "^3.1.0",
     "babel-plugin-component": "^1.1.1",
     "compression-webpack-plugin": "^3.0.0",
+    "typescript": "^3.5.2",
     "vue-template-compiler": "^2.6.10"
   },
   "scripts": {

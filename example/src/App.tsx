@@ -1,5 +1,6 @@
 import {Component,Vue} from 'vue-property-decorator';
-import virtualList from '../../'
+import virtualList from 'vvlv/src/VirtualList'
+import { CreateElement } from 'vue';
 @Component({
   components: {
     virtualList
@@ -16,7 +17,7 @@ export default class App extends Vue {
       .catch(console.error);
   }
 
-  render() {
+  render(h: CreateElement) {
     return (
       <div class="virtual-box">
         <virtual-list style="height: 100%;"
