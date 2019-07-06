@@ -1,7 +1,8 @@
 import {Component,Vue, Watch, Prop} from 'vue-property-decorator';
 import {of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest } from 'rxjs'
-import { map, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise } from 'rxjs/operators'
+import { map, throttleTime, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise } from 'rxjs/operators'
 import { VNode, CreateElement } from 'vue';
+import BScroll from 'better-scroll'
 
 interface IVirtualListOptions {
   height: number
@@ -96,14 +97,37 @@ export default class VirtualList extends Vue {
         })
     );
 
+    let scroll = new BScroll(virtualListElm, {
+      scrollbar: {
+        fade: true
+      },
+      probeType: 3,
+      mouseWheel: true,
+      click: true,
+      preventDefault: false
+    })
+
     // 滚动事件发射
-    const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
-      map(() => virtualListElm.scrollTop),
-      pairwise(),
-      filter(([oldY, newY]) => newY !== oldY),
-      map(([, y]) => y),
+    const scrollWin$ = fromEvent(scroll, 'scroll').pipe(
+      map(({y}) => {
+        return -y
+      }),
+      distinctUntilChanged(),
+      throttleTime(50), // 截流防抖
+      tap((y) => {
+        console.log(y)
+      }),
       startWith(0)
     )
+
+    // // 滚动事件发射
+    // const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
+    //   map(() => virtualListElm.scrollTop),
+    //   pairwise(),
+    //   filter(([oldY, newY]) => newY !== oldY),
+    //   map(([, y]) => y),
+    //   startWith(0)
+    // )
 
     // 计算滚动位置
     const scrollTop$ = scrollWin$.pipe(
@@ -252,7 +276,7 @@ export default class VirtualList extends Vue {
 
   render(h:CreateElement) {
     this.virtualListRef = (
-      <div style="overflow:auto;">
+      <div style="overflow:hidden;">
         <div style={{ position: 'relative', height: `${this.scrollHeight}px` }}>
           {
             this.viewlist.map((data, i) => {
