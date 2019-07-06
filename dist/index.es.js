@@ -1,6 +1,7 @@
 import { Component, Vue, Watch, Prop } from 'vue-property-decorator';
 import { of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest } from 'rxjs';
-import { map, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise } from 'rxjs/operators';
+import { map, throttleTime, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise } from 'rxjs/operators';
+import BScroll from 'better-scroll';
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
@@ -87,17 +88,31 @@ var VirtualList = /** @class */function (_super) {
         debounceTime(200)).subscribe(function () {
             _this.containerHeight$.next(virtualListElm.clientHeight);
         }));
+        var scroll = new BScroll(virtualListElm, {
+            scrollbar: {
+                fade: true
+            },
+            probeType: 3,
+            mouseWheel: true,
+            click: true,
+            preventDefault: false
+        });
         // 滚动事件发射
-        var scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(map(function () {
-            return virtualListElm.scrollTop;
-        }), pairwise(), filter(function (_a) {
-            var oldY = _a[0],
-                newY = _a[1];
-            return newY !== oldY;
-        }), map(function (_a) {
-            var y = _a[1];
-            return y;
+        var scrollWin$ = fromEvent(scroll, 'scroll').pipe(map(function (_a) {
+            var y = _a.y;
+            return -y;
+        }), distinctUntilChanged(), throttleTime(50), // 截流防抖
+        tap(function (y) {
+            console.log(y);
         }), startWith(0));
+        // // 滚动事件发射
+        // const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
+        //   map(() => virtualListElm.scrollTop),
+        //   pairwise(),
+        //   filter(([oldY, newY]) => newY !== oldY),
+        //   map(([, y]) => y),
+        //   startWith(0)
+        // )
         // 计算滚动位置
         var scrollTop$ = scrollWin$.pipe(map(function (scrollTop) {
             return scrollTop;
@@ -234,7 +249,7 @@ var VirtualList = /** @class */function (_super) {
         var _this = this;
         this.virtualListRef = h(
             'div',
-            { style: 'overflow:auto;' },
+            { style: 'overflow:hidden;' },
             [h(
                 'div',
                 { style: { position: 'relative', height: this.scrollHeight + "px" } },

@@ -2,9 +2,12 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
 var vuePropertyDecorator = require('vue-property-decorator');
 var rxjs = require('rxjs');
 var operators = require('rxjs/operators');
+var BScroll = _interopDefault(require('better-scroll'));
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
@@ -91,17 +94,31 @@ var VirtualList = /** @class */function (_super) {
         operators.debounceTime(200)).subscribe(function () {
             _this.containerHeight$.next(virtualListElm.clientHeight);
         }));
+        var scroll = new BScroll(virtualListElm, {
+            scrollbar: {
+                fade: true
+            },
+            probeType: 3,
+            mouseWheel: true,
+            click: true,
+            preventDefault: false
+        });
         // 滚动事件发射
-        var scrollWin$ = rxjs.fromEvent(virtualListElm, 'scroll').pipe(operators.map(function () {
-            return virtualListElm.scrollTop;
-        }), operators.pairwise(), operators.filter(function (_a) {
-            var oldY = _a[0],
-                newY = _a[1];
-            return newY !== oldY;
-        }), operators.map(function (_a) {
-            var y = _a[1];
-            return y;
+        var scrollWin$ = rxjs.fromEvent(scroll, 'scroll').pipe(operators.map(function (_a) {
+            var y = _a.y;
+            return -y;
+        }), operators.distinctUntilChanged(), operators.throttleTime(50), // 截流防抖
+        operators.tap(function (y) {
+            console.log(y);
         }), operators.startWith(0));
+        // // 滚动事件发射
+        // const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
+        //   map(() => virtualListElm.scrollTop),
+        //   pairwise(),
+        //   filter(([oldY, newY]) => newY !== oldY),
+        //   map(([, y]) => y),
+        //   startWith(0)
+        // )
         // 计算滚动位置
         var scrollTop$ = scrollWin$.pipe(operators.map(function (scrollTop) {
             return scrollTop;
@@ -238,7 +255,7 @@ var VirtualList = /** @class */function (_super) {
         var _this = this;
         this.virtualListRef = h(
             'div',
-            { style: 'overflow:auto;' },
+            { style: 'overflow:hidden;' },
             [h(
                 'div',
                 { style: { position: 'relative', height: this.scrollHeight + "px" } },
