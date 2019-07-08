@@ -117,16 +117,6 @@ export default class VirtualList extends Vue {
       startWith(0)
     )
 
-    // // 滚动事件发射
-    // const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
-    //   map(() => virtualListElm.scrollTop),
-    //   pairwise(),
-    //   filter(([oldY, newY]) => newY !== oldY),
-    //   map(([, y]) => y),
-    //   startWith(0)
-    // )
-
-    // 计算滚动位置
     const scrollTop$ = scrollWin$.pipe(
       map((scrollTop) => scrollTop),
     )
