@@ -1,7 +1,7 @@
 import { Component, Vue, Watch, Prop } from 'vue-property-decorator';
 import { of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest } from 'rxjs';
-import { map, throttleTime, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise } from 'rxjs/operators';
-import BScroll from 'better-scroll';
+import { map, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise, takeWhile } from 'rxjs/operators';
+import styled from 'vue-styled-components';
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
@@ -17,268 +17,265 @@ MERCHANTABLITY OR NON-INFRINGEMENT.
 See the Apache Version 2.0 License for specific language governing permissions
 and limitations under the License.
 ***************************************************************************** */
-/* global Reflect, Promise */
-
-var extendStatics = function(d, b) {
-    extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return extendStatics(d, b);
-};
-
-function __extends(d, b) {
-    extendStatics(d, b);
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-}
 
 function __decorate(decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    var c = arguments.length,
+        r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+        d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 }
 
-var VirtualList = /** @class */function (_super) {
-    __extends(VirtualList, _super);
-    function VirtualList() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.viewlist = [];
-        _this.scrollHeight = 0;
+let VirtualList = class VirtualList extends Vue {
+    constructor() {
+        super(...arguments);
+        this.viewlist = [];
+        this.scrollHeight = 0;
+        this.containerHeight = 0;
+        this.scrollBarHeight = 0;
         /**
          * 容器高度变化的流
          *
          * @private
          * @memberof VirtualList
          */
-        _this.containerHeight$ = new BehaviorSubject(0);
-        _this.list$ = new BehaviorSubject([]);
-        _this.subscription = new Subscription();
-        _this.stateDataSnapshot = [];
-        _this.lastFirstIndex = -1;
+        this.containerHeight$ = new BehaviorSubject(0);
+        this.list$ = new BehaviorSubject([]);
+        this.subscription = new Subscription();
+        this.stateDataSnapshot = [];
+        this.lastFirstIndex = -1;
         // snapshot of actualRows
-        _this.actualRowsSnapshot = 0;
-        return _this;
+        this.actualRowsSnapshot = 0;
+        this.scrollBarTop = 0;
+        this.scrollBarDuring = 0;
     }
-    VirtualList.prototype.listChange = function () {
+    listChange() {
         this.list$.next(this.list);
-    };
-    VirtualList.prototype.mounted = function () {
-        var _this = this;
+    }
+    mounted() {
         this.list$.next(this.list);
         // 数据加载完毕后，对快照查漏补缺
-        this.subscription.add(this.list$.pipe(pairwise(), tap(function (_a) {
-            var newList = _a[1];
-            _this.stateDataSnapshot.forEach(function (item) {
+        this.subscription.add(this.list$.pipe(pairwise(), tap(([, newList]) => {
+            this.stateDataSnapshot.forEach(item => {
                 item.origin = newList[item.$index];
             });
         })).subscribe());
-        var options$ = of(this.options);
-        var virtualListElm = this.virtualListRef.elm;
+        const options$ = of(this.options);
+        const virtualListElm = this.virtualListRef.elm;
         this.containerHeight$.next(virtualListElm.clientHeight);
         // window resize
-        this.subscription.add(fromEvent(window, 'resize').pipe(withLatestFrom(options$), map(function (_a) {
-            var options = _a[1];
+        this.subscription.add(fromEvent(window, 'resize').pipe(withLatestFrom(options$), map(([, options]) => {
             options.resize = options.resize === undefined;
             return options;
-        }), skipWhile(function (options) {
-            return !!!options.resize;
-        }),
+        }), skipWhile(options => !!!options.resize),
         // startWith(null),
-        debounceTime(200)).subscribe(function () {
-            _this.containerHeight$.next(virtualListElm.clientHeight);
+        debounceTime(200)).subscribe(() => {
+            this.containerHeight$.next(virtualListElm.clientHeight);
         }));
-        var scroll = new BScroll(virtualListElm, {
-            scrollbar: {
-                fade: true
-            },
-            probeType: 3,
-            mouseWheel: true,
-            click: true,
-            preventDefault: false
-        });
         // 滚动事件发射
-        var scrollWin$ = fromEvent(scroll, 'scroll').pipe(map(function (_a) {
-            var y = _a.y;
-            return -y;
-        }), distinctUntilChanged(), throttleTime(50), // 截流防抖
-        startWith(0));
-        // // 滚动事件发射
-        // const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
-        //   map(() => virtualListElm.scrollTop),
-        //   pairwise(),
-        //   filter(([oldY, newY]) => newY !== oldY),
-        //   map(([, y]) => y),
-        //   startWith(0)
-        // )
-        // 计算滚动位置
-        var scrollTop$ = scrollWin$.pipe(map(function (scrollTop) {
-            return scrollTop;
+        const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(map(({ target }) => {
+            return target.scrollTop;
+        }), distinctUntilChanged(), startWith(0));
+        this.$nextTick(() => {
+            virtualListElm.scrollTop = 1000;
+        });
+        this.subscription.add(fromEvent(this.scrollBarWarpRef.elm, 'mousewheel').subscribe(event => {
+            virtualListElm.scrollTop = virtualListElm.scrollTop + event.deltaY;
+        }));
+        this.subscription.add(fromEvent(this.scrollBarRef.elm, 'mousedown').subscribe(event => {
+            event.preventDefault();
+            const onset = event.clientY;
+            const scrollTop = virtualListElm.scrollTop;
+            this.subscription.add(combineLatest(combineLatest(fromEvent(document, 'mousemove'), this.containerHeight$, scrollHeight$).pipe(tap(([event, containerHeight, scrollHeight]) => {
+                const scrollScope = scrollHeight - containerHeight;
+                const offset = event.clientY - onset;
+                virtualListElm.scrollTop = offset / containerHeight * scrollScope + scrollTop;
+            })), fromEvent(document, 'mouseup')).pipe(takeWhile(() => {
+                return false;
+            })).subscribe());
+        }));
+        const scrollTop$ = new BehaviorSubject(0);
+        // 滚动事件订阅
+        this.subscription.add(scrollWin$.subscribe(scrollTop => {
+            scrollTop$.next(scrollTop);
         }));
         // 计算滚动方向
-        var scrollDirection$ = scrollTop$.pipe(pairwise(), map(function (_a) {
-            var oldTop = _a[0],
-                newTop = _a[1];
+        const scrollDirection$ = scrollTop$.pipe(pairwise(), map(([oldTop, newTop]) => {
             return newTop - oldTop > 0 ? 1 : -1;
         }), startWith(1));
         // 计算可滚动内容的高度
-        var scrollHeight$ = combineLatest(this.list$, options$).pipe(map(function (_a) {
-            var list = _a[0],
-                height = _a[1].height;
+        const scrollHeight$ = combineLatest(this.list$, options$).pipe(map(([list, { height }]) => {
             return list.length * height;
         }));
-        // 滚动触发加载
-        var scrolling$ = combineLatest(scrollTop$, scrollDirection$).pipe(map(function (_a) {
-            var scrollTop = _a[0],
-                dir = _a[1];
-            return [scrollTop, dir];
+        const scrollBarHeight$ = combineLatest(this.containerHeight$, scrollHeight$).pipe(map(([containerHeight, scrollHeight]) => {
+            return containerHeight / scrollHeight * containerHeight;
+        }), map(scrollBarHeight => {
+            return scrollBarHeight < 20 ? 20 : scrollBarHeight;
+        }), tap(scrollBarHeight => {
+            this.scrollBarHeight = scrollBarHeight;
+        }), startWith(0));
+        const scrollBarTop$ = combineLatest(scrollBarHeight$, scrollTop$, this.containerHeight$, scrollHeight$).pipe(map(([scrollBarHeight, scrollTop, containerHeight, scrollHeight]) => {
+            const scrollScope = scrollHeight - containerHeight;
+            const scrollBarScope = containerHeight - scrollBarHeight;
+            return scrollBarScope * (scrollTop / scrollScope);
         }));
+        this.subscription.add(scrollBarHeight$.subscribe());
+        const scrollBarDuring$ = new BehaviorSubject(0);
+        this.subscription.add(scrollBarTop$.pipe(tap(() => {
+            scrollBarDuring$.next(1);
+        }), debounceTime(1000)).subscribe(() => {
+            scrollBarDuring$.next(0);
+        }));
+        this.subscription.add(scrollBarDuring$.pipe(distinctUntilChanged(), tap(scrollBarDuring => {
+            this.scrollBarDuring = scrollBarDuring;
+        })).subscribe());
+        this.subscription.add(scrollBarTop$.subscribe(scrollBarTop => {
+            this.scrollBarTop = scrollBarTop;
+        }));
+        // 滚动触发加载
+        const scrolling$ = combineLatest(scrollTop$, scrollDirection$).pipe(map(([scrollTop, dir]) => [scrollTop, dir]));
         // 计算上拉加载
-        var pullUpLoad$ = defer(function () {
+        const pullUpLoad$ = defer(() => {
             // 防止重复触发
-            var pullUpping = false;
-            return combineLatest(scrolling$, _this.containerHeight$, scrollHeight$).pipe(map(function (_a) {
-                var _b = _a[0],
-                    scrollTop = _b[0],
-                    dir = _b[1],
-                    ch = _a[1],
-                    scrollHeight = _a[2];
+            let pullUpping = false;
+            return combineLatest(scrolling$, this.containerHeight$, scrollHeight$).pipe(map(([[scrollTop, dir], ch, scrollHeight]) => {
                 return dir > 0 && scrollHeight - (scrollTop + ch) < ch * 1;
-            }), filter(function (state) {
+            }), filter(state => {
                 if (!state) {
                     pullUpping = false;
                 }
                 return !pullUpping && state;
-            }), tap(function () {
+            }), tap(() => {
                 pullUpping = true;
             }));
         });
         // 订阅滚动加载
-        this.subscription.add(combineLatest(pullUpLoad$).subscribe(function () {
-            _this.$emit('pullUpLoad');
+        this.subscription.add(combineLatest(pullUpLoad$).subscribe(() => {
+            this.$emit('pullUpLoad');
         }));
         // 根据容器高度与给定的 item 高度，计算出实际应创建的 行数量
-        var actualRows$ = combineLatest(this.containerHeight$, options$).pipe(map(function (_a) {
-            var ch = _a[0],
-                option = _a[1];
-            return Math.ceil(ch / option.height) + (option.spare || 1);
-        }), tap(function (count) {}));
-        var shouldUpdate$ = combineLatest(scrollWin$.pipe(map(function (scrollTop) {
-            return scrollTop;
-        })), this.list$, options$, actualRows$).pipe(
+        const actualRows$ = combineLatest(this.containerHeight$, options$).pipe(map(([ch, option]) => Math.ceil(ch / option.height) + (option.spare || 1)), tap(count => {}));
+        const shouldUpdate$ = combineLatest(scrollTop$.pipe(map(scrollTop => scrollTop)), this.list$, options$, actualRows$).pipe(
         // 计算当前列表中最顶部的索引
-        map(function (_a) {
-            var scrollTop = _a[0],
-                list = _a[1],
-                height = _a[2].height,
-                actualRows = _a[3];
-            var firstIndex = Math.floor(scrollTop / height);
+        map(([scrollTop, list, { height }, actualRows]) => {
+            const firstIndex = Math.floor(scrollTop / height);
             // the first index of the virtualList on the last screen, if < 0, reset to 0
-            var maxIndex = list.length - actualRows < 0 ? 0 : list.length - actualRows;
+            const maxIndex = list.length - actualRows < 0 ? 0 : list.length - actualRows;
             return [firstIndex > maxIndex ? maxIndex : firstIndex, actualRows];
         }),
         // 如果索引有改变，才触发重新 render
-        filter(function (_a) {
-            var curIndex = _a[0],
-                actualRows = _a[1];
-            return curIndex !== _this.lastFirstIndex || actualRows !== _this.actualRowsSnapshot;
-        }),
+        filter(([curIndex, actualRows]) => curIndex !== this.lastFirstIndex || actualRows !== this.actualRowsSnapshot),
         // update the index
-        tap(function (_a) {
-            var curIndex = _a[0];
-            return _this.lastFirstIndex = curIndex;
-        }), map(function (_a) {
-            var firstIndex = _a[0],
-                actualRows = _a[1];
-            var lastIndex = firstIndex + actualRows - 1;
+        tap(([curIndex]) => this.lastFirstIndex = curIndex), map(([firstIndex, actualRows]) => {
+            const lastIndex = firstIndex + actualRows - 1;
             return [firstIndex, lastIndex];
         }));
         // 计算当前需要的数据区块
-        var dataInViewSlice$ = combineLatest(this.list$, options$, shouldUpdate$).pipe(withLatestFrom(scrollDirection$, actualRows$), map(function (_a) {
-            var _b = _a[0],
-                list = _b[0],
-                height = _b[1].height,
-                _c = _b[2],
-                firstIndex = _c[0],
-                lastIndex = _c[1],
-                dir = _a[1],
-                actualRows = _a[2];
-            var dataSlice = _this.stateDataSnapshot;
-            if (!dataSlice.length || actualRows !== _this.actualRowsSnapshot) {
-                if (actualRows !== _this.actualRowsSnapshot) {
-                    _this.actualRowsSnapshot = actualRows;
+        const dataInViewSlice$ = combineLatest(this.list$, options$, shouldUpdate$).pipe(withLatestFrom(scrollDirection$, actualRows$), map(([[list, { height }, [firstIndex, lastIndex]], dir, actualRows]) => {
+            const dataSlice = this.stateDataSnapshot;
+            if (!dataSlice.length || actualRows !== this.actualRowsSnapshot) {
+                if (actualRows !== this.actualRowsSnapshot) {
+                    this.actualRowsSnapshot = actualRows;
                 }
-                return _this.stateDataSnapshot = list.slice(firstIndex, lastIndex + 1).map(function (item) {
-                    return {
-                        origin: item,
-                        $pos: firstIndex * height,
-                        $index: firstIndex++
-                    };
-                });
+                return this.stateDataSnapshot = list.slice(firstIndex, lastIndex + 1).map(item => ({
+                    origin: item,
+                    $pos: firstIndex * height,
+                    $index: firstIndex++
+                }));
             }
             // 拿到不需要显示的内容块，回收利用
-            var diffSliceIndexes = _this.getDifferenceIndexes(dataSlice, firstIndex, lastIndex);
-            var newIndex = dir > 0 ? lastIndex - diffSliceIndexes.length + 1 : firstIndex;
-            diffSliceIndexes.forEach(function (index) {
-                var item = dataSlice[index];
+            const diffSliceIndexes = this.getDifferenceIndexes(dataSlice, firstIndex, lastIndex);
+            let newIndex = dir > 0 ? lastIndex - diffSliceIndexes.length + 1 : firstIndex;
+            diffSliceIndexes.forEach(index => {
+                const item = dataSlice[index];
                 item.origin = list[newIndex];
                 item.$pos = newIndex * height;
                 item.$index = newIndex++;
             });
-            return _this.stateDataSnapshot = dataSlice;
+            return this.stateDataSnapshot = dataSlice;
         }));
-        this.subscription.add(combineLatest(dataInViewSlice$, scrollHeight$).subscribe(function (_a) {
-            var list = _a[0],
-                scrollHeight = _a[1];
-            _this.viewlist = list;
-            _this.scrollHeight = scrollHeight;
+        this.subscription.add(combineLatest(dataInViewSlice$, scrollHeight$).subscribe(([list, scrollHeight]) => {
+            this.viewlist = list;
+            this.scrollHeight = scrollHeight;
         }));
-    };
-    VirtualList.prototype.getDifferenceIndexes = function (slice, firstIndex, lastIndex) {
-        var indexes = [];
-        slice.forEach(function (item, i) {
+    }
+    getDifferenceIndexes(slice, firstIndex, lastIndex) {
+        const indexes = [];
+        slice.forEach((item, i) => {
             if (item.$index < firstIndex || item.$index > lastIndex) {
                 indexes.push(i);
             }
         });
         return indexes;
-    };
-    VirtualList.prototype.render = function (h) {
-        var _this = this;
+    }
+    render(h) {
         this.virtualListRef = h(
             'div',
-            { style: 'overflow:hidden;' },
+            { 'class': 'scrollarp', style: 'float: left;overflow:auto;height: 100%;width: 100%;padding-right: 18px;box-sizing: content-box;' },
             [h(
                 'div',
-                { style: { position: 'relative', height: this.scrollHeight + "px" } },
-                [this.viewlist.map(function (data, i) {
+                { style: { position: 'relative', height: `${this.scrollHeight}px` } },
+                [this.viewlist.map((data, i) => {
                     return h(
                         'div',
                         { key: i, style: {
                                 position: 'absolute',
                                 width: '100%',
-                                transform: "translateY(" + data.$pos + "px)"
+                                transform: `translateY(${data.$pos}px)`
                             } },
-                        [_this.$scopedSlots.default(data.origin)]
+                        [this.$scopedSlots.default(data.origin)]
                     );
                 })]
             )]
         );
-        return this.virtualListRef;
-    };
-    __decorate([Prop({
-        required: true,
-        default: function () {
-            return [];
-        }
-    })], VirtualList.prototype, "list", void 0);
-    __decorate([Prop()], VirtualList.prototype, "options", void 0);
-    __decorate([Watch('list', {
-        deep: true
-    })], VirtualList.prototype, "listChange", null);
-    VirtualList = __decorate([Component({})], VirtualList);
-    return VirtualList;
-}(Vue);
+        this.scrollBarRef = h('scroll-bar', { style: {
+                'opacity': this.scrollBarDuring,
+                'height': `${this.scrollBarHeight}px`,
+                'top': `0px`,
+                'transform': `translateY(${this.scrollBarTop}px)`,
+                'right': '0'
+            } });
+        this.scrollBarWarpRef = h('scroll-bar-warp', [this.scrollBarRef]);
+        return h(
+            'div',
+            { style: 'position: relative;overflow: hidden;height: 100%;' },
+            [this.virtualListRef, this.scrollBarWarpRef]
+        );
+    }
+};
+__decorate([Prop({
+    required: true,
+    default() {
+        return [];
+    }
+})], VirtualList.prototype, "list", void 0);
+__decorate([Prop()], VirtualList.prototype, "options", void 0);
+__decorate([Watch('list', {
+    deep: true
+})], VirtualList.prototype, "listChange", null);
+VirtualList = __decorate([Component({
+    components: {
+        scrollBarWarp: styled.div`
+      position: absolute;
+      width: 9px;
+      top: 0px;
+      bottom: 0px;
+      right: 0px;
+    `,
+        scrollBar: styled.div`
+      position: absolute;
+      background: rgba(0, 0, 0, 0.55);
+      width: 9px;
+      border-radius: 4px;
+      top: 0;
+      z-index: 2;
+      cursor: pointer;
+      opacity: 1;
+      transition: opacity 0.25s linear;
+    `
+    }
+})], VirtualList);
+var VirtualList$1 = VirtualList;
 
-export default VirtualList;
+export default VirtualList$1;
 //# sourceMappingURL=index.es.js.map

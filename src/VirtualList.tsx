@@ -1,11 +1,7 @@
 import {Component,Vue, Watch, Prop} from 'vue-property-decorator';
-import {of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest, timer } from 'rxjs'
-import { map, first, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise, takeWhile } from 'rxjs/operators'
+import {of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest } from 'rxjs'
+import { map, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise, takeWhile } from 'rxjs/operators'
 import { VNode, CreateElement } from 'vue';
-// import BScroll from 'better-scroll'
-// import SimpleScrollbar from 'simple-scrollbar'
-// import 'simple-scrollbar/simple-scrollbar.css'
-// const SimpleScrollbar = require('simple-scrollbar');
 import styled from 'vue-styled-components';
 
 interface IVirtualListOptions {
@@ -132,18 +128,6 @@ export default class VirtualList extends Vue {
         })
     );
 
-    // let scroll = new BScroll(virtualListElm, {
-    //   scrollbar: {
-    //     fade: true
-    //   },
-    //   probeType: 3,
-    //   mouseWheel: true,
-    //   click: true,
-    //   preventDefault: false
-    // })
-
-    // SimpleScrollbar.initEl(virtualListElm);
-
     // 滚动事件发射
     const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
       map(({target}) => {
@@ -152,15 +136,10 @@ export default class VirtualList extends Vue {
       distinctUntilChanged(),
       startWith(0)
     )
-    
-    console.log(virtualListElm)
 
     this.$nextTick(() => {
       virtualListElm.scrollTop = 1000;
     })
-    
-    
-
 
     this.subscription.add(
       fromEvent(this.scrollBarWarpRef.elm as HTMLElement, 'mousewheel')
@@ -223,7 +202,6 @@ export default class VirtualList extends Vue {
 
     const scrollBarHeight$ = combineLatest(this.containerHeight$, scrollHeight$).pipe(
       map(([containerHeight, scrollHeight]) => {
-        console.log(containerHeight, scrollHeight)
         return (containerHeight / scrollHeight) * containerHeight
       }),
       map((scrollBarHeight) => {
@@ -237,10 +215,8 @@ export default class VirtualList extends Vue {
 
     const scrollBarTop$ = combineLatest(scrollBarHeight$, scrollTop$, this.containerHeight$, scrollHeight$).pipe(
       map(([scrollBarHeight, scrollTop, containerHeight, scrollHeight]) => {
-        // console.log(scrollBarHeight, scrollTop, containerHeight, scrollHeight);
         const scrollScope = scrollHeight - containerHeight;
         const scrollBarScope = containerHeight - scrollBarHeight;
-        // console.log(scrollTop / scrollScope, scrollBarScope * (scrollTop / scrollScope))
         return scrollBarScope * (scrollTop / scrollScope)
       })
     )
@@ -248,17 +224,6 @@ export default class VirtualList extends Vue {
     this.subscription.add(scrollBarHeight$
       .subscribe()
     )
-
-    // this.subscription.add(scrollBarTop$.pipe(
-    //   map(() => {
-    //     return this.scrollBarDuring
-    //   }),
-    //   tap(() => {
-    //     this.scrollBarDuring = 1;
-    //   })
-    // ).subscribe(() => {
-    //   console.log('滚动开始')
-    // }))
 
     const scrollBarDuring$ = new BehaviorSubject<number>(0);
 
