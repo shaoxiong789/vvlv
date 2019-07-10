@@ -1,8 +1,12 @@
 import {Component,Vue, Watch, Prop} from 'vue-property-decorator';
-import {of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest } from 'rxjs'
-import { map, throttleTime, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise } from 'rxjs/operators'
+import {of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest, timer } from 'rxjs'
+import { map, first, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise, takeWhile } from 'rxjs/operators'
 import { VNode, CreateElement } from 'vue';
-import BScroll from 'better-scroll'
+// import BScroll from 'better-scroll'
+// import SimpleScrollbar from 'simple-scrollbar'
+// import 'simple-scrollbar/simple-scrollbar.css'
+// const SimpleScrollbar = require('simple-scrollbar');
+import styled from 'vue-styled-components';
 
 interface IVirtualListOptions {
   height: number
@@ -10,7 +14,28 @@ interface IVirtualListOptions {
   resize?: boolean 
 }
 
-@Component({})
+@Component({
+  components: {
+    scrollBarWarp: styled.div`
+      position: absolute;
+      width: 9px;
+      top: 0px;
+      bottom: 0px;
+      right: 0px;
+    `,
+    scrollBar: styled.div`
+      position: absolute;
+      background: rgba(0, 0, 0, 0.55);
+      width: 9px;
+      border-radius: 4px;
+      top: 0;
+      z-index: 2;
+      cursor: pointer;
+      opacity: 1;
+      transition: opacity 0.25s linear;
+    `
+  }
+})
 export default class VirtualList extends Vue {
 
   @Prop({
@@ -28,6 +53,9 @@ export default class VirtualList extends Vue {
 
   scrollHeight:number = 0
 
+  containerHeight:number = 0
+
+  scrollBarHeight:number = 0;
   /**
    * 容器高度变化的流
    *
@@ -49,6 +77,13 @@ export default class VirtualList extends Vue {
   // snapshot of actualRows
   private actualRowsSnapshot: number = 0;
 
+  scrollBarTop: number = 0;
+
+  scrollBarDuring:number = 0;
+
+  private scrollBarWarpRef!: VNode;
+
+  private scrollBarRef!: VNode;
 
   @Watch('list', {
     deep: true
@@ -97,28 +132,77 @@ export default class VirtualList extends Vue {
         })
     );
 
-    let scroll = new BScroll(virtualListElm, {
-      scrollbar: {
-        fade: true
-      },
-      probeType: 3,
-      mouseWheel: true,
-      click: true,
-      preventDefault: false
-    })
+    // let scroll = new BScroll(virtualListElm, {
+    //   scrollbar: {
+    //     fade: true
+    //   },
+    //   probeType: 3,
+    //   mouseWheel: true,
+    //   click: true,
+    //   preventDefault: false
+    // })
+
+    // SimpleScrollbar.initEl(virtualListElm);
 
     // 滚动事件发射
-    const scrollWin$ = fromEvent(scroll, 'scroll').pipe(
-      map(({y}) => {
-        return -y
+    const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(
+      map(({target}) => {
+        return (target as HTMLElement).scrollTop
       }),
       distinctUntilChanged(),
-      throttleTime(50), // 截流防抖
       startWith(0)
     )
+    
+    console.log(virtualListElm)
 
-    const scrollTop$ = scrollWin$.pipe(
-      map((scrollTop) => scrollTop),
+    this.$nextTick(() => {
+      virtualListElm.scrollTop = 1000;
+    })
+    
+    
+
+
+    this.subscription.add(
+      fromEvent(this.scrollBarWarpRef.elm as HTMLElement, 'mousewheel')
+      .subscribe((event) => {
+        virtualListElm.scrollTop = virtualListElm.scrollTop + (event as WheelEvent).deltaY;
+      })
+    )
+
+    this.subscription.add(
+      fromEvent(this.scrollBarRef.elm as HTMLElement, 'mousedown')
+      .subscribe((event) => { 
+        event.preventDefault();
+        const onset = (event as MouseEvent).clientY;
+        const scrollTop = virtualListElm.scrollTop;
+        this.subscription.add(
+          combineLatest(
+            combineLatest(fromEvent(document as Document, 'mousemove'), this.containerHeight$, scrollHeight$).pipe(
+              tap(([event, containerHeight, scrollHeight]) => {
+                const scrollScope = scrollHeight - containerHeight;
+                const offset = (event as MouseEvent).clientY - onset
+                virtualListElm.scrollTop = (offset / containerHeight) * scrollScope + scrollTop
+              })
+            ),
+            fromEvent(document as Document, 'mouseup')
+          ).pipe(
+            takeWhile(() => {
+              return false;
+            })
+          )
+          .subscribe()
+        )
+      })
+    )
+
+
+    const scrollTop$ = new BehaviorSubject<number>(0);
+
+    // 滚动事件订阅
+    this.subscription.add(scrollWin$
+      .subscribe((scrollTop) => {
+        scrollTop$.next(scrollTop)
+      })
     )
 
     // 计算滚动方向
@@ -136,6 +220,72 @@ export default class VirtualList extends Vue {
         return list.length * height
       })
     )
+
+    const scrollBarHeight$ = combineLatest(this.containerHeight$, scrollHeight$).pipe(
+      map(([containerHeight, scrollHeight]) => {
+        console.log(containerHeight, scrollHeight)
+        return (containerHeight / scrollHeight) * containerHeight
+      }),
+      map((scrollBarHeight) => {
+        return scrollBarHeight < 20 ? 20 :  scrollBarHeight
+      }),
+      tap((scrollBarHeight) => {
+        this.scrollBarHeight = scrollBarHeight;
+      }),
+      startWith(0)
+    )
+
+    const scrollBarTop$ = combineLatest(scrollBarHeight$, scrollTop$, this.containerHeight$, scrollHeight$).pipe(
+      map(([scrollBarHeight, scrollTop, containerHeight, scrollHeight]) => {
+        // console.log(scrollBarHeight, scrollTop, containerHeight, scrollHeight);
+        const scrollScope = scrollHeight - containerHeight;
+        const scrollBarScope = containerHeight - scrollBarHeight;
+        // console.log(scrollTop / scrollScope, scrollBarScope * (scrollTop / scrollScope))
+        return scrollBarScope * (scrollTop / scrollScope)
+      })
+    )
+
+    this.subscription.add(scrollBarHeight$
+      .subscribe()
+    )
+
+    // this.subscription.add(scrollBarTop$.pipe(
+    //   map(() => {
+    //     return this.scrollBarDuring
+    //   }),
+    //   tap(() => {
+    //     this.scrollBarDuring = 1;
+    //   })
+    // ).subscribe(() => {
+    //   console.log('滚动开始')
+    // }))
+
+    const scrollBarDuring$ = new BehaviorSubject<number>(0);
+
+    this.subscription.add(scrollBarTop$.pipe(
+      tap(() => {
+        scrollBarDuring$.next(1);
+      }),
+      debounceTime(1000)
+    ).subscribe(() => {
+      scrollBarDuring$.next(0);
+    }))
+
+    this.subscription.add(scrollBarDuring$.pipe(
+      distinctUntilChanged(),
+      tap((scrollBarDuring) => {
+        this.scrollBarDuring = scrollBarDuring;
+      })
+    ).subscribe())
+
+
+    
+    this.subscription.add(scrollBarTop$.subscribe(
+      (scrollBarTop) => {
+        this.scrollBarTop = scrollBarTop;
+      }
+    ))
+    
 
     // 滚动触发加载
     const scrolling$ = combineLatest(scrollTop$, scrollDirection$).pipe(
@@ -179,7 +329,7 @@ export default class VirtualList extends Vue {
     )
 
     const shouldUpdate$ = combineLatest(
-      scrollWin$.pipe(map((scrollTop) => scrollTop)),
+      scrollTop$.pipe(map((scrollTop) => scrollTop)),
       this.list$,
       options$,
       actualRows$
@@ -263,7 +413,7 @@ export default class VirtualList extends Vue {
 
   render(h:CreateElement) {
     this.virtualListRef = (
-      <div style="overflow:hidden;">
+      <div class="scrollarp" style="float: left;overflow:auto;height: 100%;width: 100%;padding-right: 18px;box-sizing: content-box;">
         <div style={{ position: 'relative', height: `${this.scrollHeight}px` }}>
           {
             this.viewlist.map((data, i) => {
@@ -282,6 +432,27 @@ export default class VirtualList extends Vue {
         </div>
       </div>
     )
-    return this.virtualListRef
+
+    this.scrollBarRef = (
+      <scroll-bar style={{ 
+        'opacity': this.scrollBarDuring, 
+        'height': `${this.scrollBarHeight}px`, 
+        'top': `0px`, 
+        'transform': `translateY(${this.scrollBarTop}px)`,
+        'right': '0'
+      }}></scroll-bar>
+    )
+
+    this.scrollBarWarpRef = (
+      <scroll-bar-warp>
+        { this.scrollBarRef }
+      </scroll-bar-warp>
+    )
+    return (
+      <div style="position: relative;overflow: hidden;height: 100%;">
+        { this.virtualListRef }
+        { this.scrollBarWarpRef }
+      </div>
+    )
   }
 }

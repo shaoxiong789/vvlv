@@ -22,8 +22,8 @@
     "test:watch": "react-scripts-ts test --env=jsdom",
     "build": "rollup -c",
     "start": "rollup -c -w",
-    "prepare": "yarn run build",
-    "predeploy": "cd example && yarn install && yarn run build",
+    "prepare": "cnpm run build",
+    "predeploy": "cd example && cnpm install && cnpm run build",
     "deploy": "gh-pages -d example/build",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0"
   },
@@ -35,7 +35,9 @@
     "better-scroll": "^1.15.2",
     "lodash": "^4.17.11",
     "vue": "^2.6.10",
-    "vue-property-decorator": "^8.2.1"
+    "vue-property-decorator": "^8.2.1",
+    "simple-scrollbar": "^0.4.0",
+    "vue-styled-components": "^1.4.5"
   },
   "devDependencies": {
     "@svgr/rollup": "^2.4.1",
@@ -74,5 +76,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "vue-styled-components": "^1.4.5"
+  }
 }
