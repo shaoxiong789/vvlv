@@ -1,7 +1,6 @@
 import {Component,Vue} from 'vue-property-decorator';
 import virtualList from 'vvlv/src/VirtualList'
 import { CreateElement } from 'vue';
-import photos from './photos'
 @Component({
   components: {
     virtualList
@@ -12,11 +11,10 @@ export default class App extends Vue {
   data:Array<any> = [];
 
   mounted() {
-    // fetch('https://jsonplaceholder.typicode.com/photos')
-    //   .then(res => res.json())
-    //   .then(data => this.data = data)
-    //   .catch(console.error);
-    this.data = photos;
+    fetch('https://jsonplaceholder.typicode.com/photos')
+      .then(res => res.json())
+      .then(data => this.data = data)
+      .catch(console.error);
   }
 
   render(h: CreateElement) {
