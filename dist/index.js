@@ -82,9 +82,6 @@ let VirtualList = class VirtualList extends vuePropertyDecorator.Vue {
         const scrollWin$ = rxjs.fromEvent(virtualListElm, 'scroll').pipe(operators.map(({ target }) => {
             return target.scrollTop;
         }), operators.distinctUntilChanged(), operators.startWith(0));
-        this.$nextTick(() => {
-            virtualListElm.scrollTop = 1000;
-        });
         this.subscription.add(rxjs.fromEvent(this.scrollBarWarpRef.elm, 'mousewheel').subscribe(event => {
             virtualListElm.scrollTop = virtualListElm.scrollTop + event.deltaY;
         }));

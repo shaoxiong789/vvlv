@@ -137,10 +137,6 @@ export default class VirtualList extends Vue {
       startWith(0)
     )
 
-    this.$nextTick(() => {
-      virtualListElm.scrollTop = 1000;
-    })
-
     this.subscription.add(
       fromEvent(this.scrollBarWarpRef.elm as HTMLElement, 'mousewheel')
       .subscribe((event) => {

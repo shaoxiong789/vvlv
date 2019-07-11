@@ -76,9 +76,6 @@ let VirtualList = class VirtualList extends Vue {
         const scrollWin$ = fromEvent(virtualListElm, 'scroll').pipe(map(({ target }) => {
             return target.scrollTop;
         }), distinctUntilChanged(), startWith(0));
-        this.$nextTick(() => {
-            virtualListElm.scrollTop = 1000;
-        });
         this.subscription.add(fromEvent(this.scrollBarWarpRef.elm, 'mousewheel').subscribe(event => {
             virtualListElm.scrollTop = virtualListElm.scrollTop + event.deltaY;
         }));
