@@ -104,7 +104,7 @@ export default class VirtualList extends Vue {
       .subscribe()
     )
 
-    var options$ = of(this.options)
+    const options$ = of(this.options)
 
     const virtualListElm = this.virtualListRef.elm as HTMLElement;
 
