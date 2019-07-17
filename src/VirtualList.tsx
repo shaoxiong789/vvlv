@@ -3,6 +3,7 @@ import {of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest } fro
 import { map, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise, takeWhile } from 'rxjs/operators'
 import { VNode, CreateElement } from 'vue';
 import styled from 'vue-styled-components';
+import { ArrayUtils } from './utils';
 
 interface IVirtualListOptions {
   height: number
@@ -325,8 +326,8 @@ export default class VirtualList extends Vue {
           if (actualRows !== this.actualRowsSnapshot) {
             this.actualRowsSnapshot = actualRows;
           }
-
-          return this.stateDataSnapshot = list.slice(firstIndex, lastIndex + 1).map(item => ({
+          return this.stateDataSnapshot = ArrayUtils(list.slice(firstIndex, lastIndex + 1))
+          .copyOf(lastIndex + 1).map(item => ({
             origin: item,
             $pos: firstIndex * height,
             $index: firstIndex++
@@ -348,7 +349,6 @@ export default class VirtualList extends Vue {
           item.$pos = newIndex * height;
           item.$index = newIndex++;
         });
-
         return this.stateDataSnapshot = dataSlice;
       })
     )
