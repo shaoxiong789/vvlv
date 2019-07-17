@@ -103,16 +103,6 @@ var taggedTemplateLiteral = function (strings, raw) {
   }));
 };
 
-var toConsumableArray = function (arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
-
-    return arr2;
-  } else {
-    return Array.from(arr);
-  }
-};
-
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use
@@ -136,57 +126,6 @@ function __decorate(decorators, target, key, desc) {
         if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     }return c > 3 && r && Object.defineProperty(target, key, r), r;
 }
-
-// 数字处理工具
-var NumberUtils = function NumberUtils(integer) {
-    return {
-        // Calls a defined callback function on each element of an Number, and returns an array that contains the results.
-        // 该方法只建议传入整数
-        map: function map$$1(calback) {
-            var arry = [];
-            for (var i = 0; i < integer; i++) {
-                arry.push(calback(i));
-            }
-            return arry;
-        }
-    };
-};
-// 数组处理工具
-var ArrayUtils = function ArrayUtils(array) {
-    return {
-        // 重现定义数组长度并且把原数组拷贝进去
-        copyOf: function copyOf(newLength) {
-            var newArry = [];
-            NumberUtils(newLength).map(function (index) {
-                newArry.push(array[index]);
-            });
-            return newArry;
-        },
-        // 传入第二维数组长度，将一纬数组等分成二纬数组
-        toDyadicArray: function toDyadicArray(length) {
-            var oneLength = Math.ceil(array.length / length);
-            var dyadicArray = [];
-            for (var i = 0; i < oneLength; i++) {
-                dyadicArray.push(array.splice(0, length));
-            }
-            return dyadicArray;
-        },
-        // 删除数组中制定的元素
-        remove: function remove(index) {
-            var newArray = [].concat(toConsumableArray(array));
-            if (index > -1) {
-                newArray.splice(index, 1);
-                return newArray;
-            }
-            return array;
-        },
-        insert: function insert(item, index) {
-            var newArray = [].concat(toConsumableArray(array));
-            newArray.splice(index, 0, item);
-            return newArray;
-        }
-    };
-};
 
 var _templateObject = taggedTemplateLiteral(['\n      position: absolute;\n      width: 9px;\n      top: 0px;\n      bottom: 0px;\n      right: 0px;\n    '], ['\n      position: absolute;\n      width: 9px;\n      top: 0px;\n      bottom: 0px;\n      right: 0px;\n    ']),
     _templateObject2 = taggedTemplateLiteral(['\n      position: absolute;\n      background: rgba(0, 0, 0, 0.55);\n      width: 9px;\n      border-radius: 4px;\n      top: 0;\n      z-index: 2;\n      cursor: pointer;\n      opacity: 1;\n      transition: opacity 0.25s linear;\n    '], ['\n      position: absolute;\n      background: rgba(0, 0, 0, 0.55);\n      width: 9px;\n      border-radius: 4px;\n      top: 0;\n      z-index: 2;\n      cursor: pointer;\n      opacity: 1;\n      transition: opacity 0.25s linear;\n    ']);
@@ -432,11 +371,11 @@ var VirtualList = function (_Vue) {
                     actualRows = _ref31[2];
 
                 var dataSlice = _this2.stateDataSnapshot;
-                if (!dataSlice.length || actualRows !== _this2.actualRowsSnapshot) {
+                if (!dataSlice.length || dataSlice.length < lastIndex + 1 || actualRows !== _this2.actualRowsSnapshot) {
                     if (actualRows !== _this2.actualRowsSnapshot) {
                         _this2.actualRowsSnapshot = actualRows;
                     }
-                    return _this2.stateDataSnapshot = ArrayUtils(list.slice(firstIndex, lastIndex + 1)).copyOf(lastIndex + 1).map(function (item) {
+                    return _this2.stateDataSnapshot = list.slice(firstIndex, lastIndex + 1).map(function (item) {
                         return {
                             origin: item,
                             $pos: firstIndex * height,
