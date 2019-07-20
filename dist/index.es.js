@@ -300,18 +300,18 @@ var VirtualList = function (_Vue) {
 
                     return dir > 0 && scrollHeight - (scrollTop + ch) < ch * 1;
                 }), filter(function (state) {
-                    if (!state) {
-                        pullUpping = false;
+                    if (state && !pullUpping) {
+                        _this2.pullUpLoad && _this2.pullUpLoad().then(function () {
+                            pullUpping = false;
+                        });
                     }
-                    return !pullUpping && state;
+                    return state;
                 }), tap(function () {
                     pullUpping = true;
                 }));
             });
             // 订阅滚动加载
-            this.subscription.add(combineLatest(pullUpLoad$).subscribe(function () {
-                _this2.$emit('pullUpLoad');
-            }));
+            this.subscription.add(combineLatest(pullUpLoad$).subscribe(function () {}));
             // 根据容器高度与给定的 item 高度，计算出实际应创建的 行数量
             var actualRows$ = combineLatest(this.containerHeight$, options$).pipe(map(function (_ref20) {
                 var _ref21 = slicedToArray(_ref20, 2),
@@ -465,6 +465,7 @@ __decorate([Prop()], VirtualList.prototype, "options", void 0);
 __decorate([Watch('list', {
     deep: true
 })], VirtualList.prototype, "listChange", null);
+__decorate([Prop()], VirtualList.prototype, "pullUpLoad", void 0);
 VirtualList = __decorate([Component({
     components: {
         scrollBarWarp: styled.div(_templateObject),

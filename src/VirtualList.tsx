@@ -88,6 +88,9 @@ export default class VirtualList extends Vue {
     this.list$.next(this.list)
   }
 
+  @Prop()
+  pullUpLoad?: Function;
+
   mounted() {
     this.list$.next(this.list)
 
@@ -262,10 +265,12 @@ export default class VirtualList extends Vue {
           return dir > 0 && (scrollHeight - (scrollTop + ch)) < (ch * 1);
         }),
         filter((state) => {
-          if(!state) {
-            pullUpping = false
+          if(state && !pullUpping) {
+            this.pullUpLoad && this.pullUpLoad().then(() => {
+              pullUpping = false
+            })
           }
-          return !pullUpping && state
+          return state
         }),
         tap(() => {
           pullUpping = true
@@ -277,7 +282,6 @@ export default class VirtualList extends Vue {
     this.subscription.add(
       combineLatest(pullUpLoad$)
         .subscribe(() => {
-          this.$emit('pullUpLoad')
         })
     )
 
