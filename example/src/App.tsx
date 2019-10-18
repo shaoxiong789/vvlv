@@ -1,5 +1,5 @@
 import {Component,Vue} from 'vue-property-decorator';
-import virtualList from 'vvlv/src/VirtualList'
+import virtualList from '../../src/VirtualList'
 import { CreateElement } from 'vue';
 @Component({
   components: {
@@ -20,13 +20,16 @@ export default class App extends Vue {
   render(h: CreateElement) {
     return (
       <div class="virtual-box">
+        <input type="button" value="刷新" onClick={() => {
+          this.data = []
+        }}/>
         <virtual-list style="height: 100%;"
           list={this.data} options={{ height: 180 }}
             {...{
               scopedSlots: {
                 default: item => {
                   return (
-                    <div class="card" style="height: 180px;">
+                    item && <div class="card" style="height: 180px;">
                       <a href={item.url}>
                         <div class="thumbnail">
                           <img src={item.thumbnailUrl} alt={item.title}/>

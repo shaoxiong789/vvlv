@@ -81,11 +81,18 @@ export default class VirtualList extends Vue {
 
   private scrollBarRef!: VNode;
 
+  private scrollTop$:BehaviorSubject<number> = new BehaviorSubject<number>(0);
+
+
   @Watch('list', {
     deep: true
   })
-  listChange() {
-    this.list$.next(this.list)
+  listChange(val) {
+    if(val && val.length > 0) {
+      this.list$.next(this.list)
+    } else {
+      this.scrollTop$.next(0);
+    }
   }
 
   @Prop()
@@ -174,17 +181,17 @@ export default class VirtualList extends Vue {
     )
 
 
-    const scrollTop$ = new BehaviorSubject<number>(0);
+    // const scrollTop$ = new BehaviorSubject<number>(0);
 
     // 滚动事件订阅
     this.subscription.add(scrollWin$
       .subscribe((scrollTop) => {
-        scrollTop$.next(scrollTop)
+        this.scrollTop$.next(scrollTop)
       })
     )
 
     // 计算滚动方向
-    const scrollDirection$ = scrollTop$.pipe(
+    const scrollDirection$ = this.scrollTop$.pipe(
       pairwise(),
       map(([oldTop, newTop]) => {
         return newTop - oldTop > 0 ? 1 : -1
@@ -212,7 +219,7 @@ export default class VirtualList extends Vue {
       startWith(0)
     )
 
-    const scrollBarTop$ = combineLatest(scrollBarHeight$, scrollTop$, this.containerHeight$, scrollHeight$).pipe(
+    const scrollBarTop$ = combineLatest(scrollBarHeight$, this.scrollTop$, this.containerHeight$, scrollHeight$).pipe(
       map(([scrollBarHeight, scrollTop, containerHeight, scrollHeight]) => {
         const scrollScope = scrollHeight - containerHeight;
         const scrollBarScope = containerHeight - scrollBarHeight;
@@ -252,7 +259,7 @@ export default class VirtualList extends Vue {
     
 
     // 滚动触发加载
-    const scrolling$ = combineLatest(scrollTop$, scrollDirection$).pipe(
+    const scrolling$ = combineLatest(this.scrollTop$, scrollDirection$).pipe(
       map(([scrollTop, dir]) => [scrollTop, dir])
     )
 
@@ -294,7 +301,7 @@ export default class VirtualList extends Vue {
     )
 
     const shouldUpdate$ = combineLatest(
-      scrollTop$.pipe(map((scrollTop) => scrollTop)),
+      this.scrollTop$.pipe(map((scrollTop) => scrollTop)),
       this.list$,
       options$,
       actualRows$

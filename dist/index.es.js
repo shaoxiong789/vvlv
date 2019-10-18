@@ -156,13 +156,18 @@ var VirtualList = function (_Vue) {
         _this.actualRowsSnapshot = 0;
         _this.scrollBarTop = 0;
         _this.scrollBarDuring = 0;
+        _this.scrollTop$ = new BehaviorSubject(0);
         return _this;
     }
 
     createClass(VirtualList, [{
         key: 'listChange',
-        value: function listChange() {
-            this.list$.next(this.list);
+        value: function listChange(val) {
+            if (val && val.length > 0) {
+                this.list$.next(this.list);
+            } else {
+                this.scrollTop$.next(0);
+            }
         }
     }, {
         key: 'mounted',
@@ -222,13 +227,13 @@ var VirtualList = function (_Vue) {
                     return false;
                 })).subscribe());
             }));
-            var scrollTop$ = new BehaviorSubject(0);
+            // const scrollTop$ = new BehaviorSubject<number>(0);
             // 滚动事件订阅
             this.subscription.add(scrollWin$.subscribe(function (scrollTop) {
-                scrollTop$.next(scrollTop);
+                _this2.scrollTop$.next(scrollTop);
             }));
             // 计算滚动方向
-            var scrollDirection$ = scrollTop$.pipe(pairwise(), map(function (_ref8) {
+            var scrollDirection$ = this.scrollTop$.pipe(pairwise(), map(function (_ref8) {
                 var _ref9 = slicedToArray(_ref8, 2),
                     oldTop = _ref9[0],
                     newTop = _ref9[1];
@@ -254,7 +259,7 @@ var VirtualList = function (_Vue) {
             }), tap(function (scrollBarHeight) {
                 _this2.scrollBarHeight = scrollBarHeight;
             }), startWith(0));
-            var scrollBarTop$ = combineLatest(scrollBarHeight$, scrollTop$, this.containerHeight$, scrollHeight$).pipe(map(function (_ref14) {
+            var scrollBarTop$ = combineLatest(scrollBarHeight$, this.scrollTop$, this.containerHeight$, scrollHeight$).pipe(map(function (_ref14) {
                 var _ref15 = slicedToArray(_ref14, 4),
                     scrollBarHeight = _ref15[0],
                     scrollTop = _ref15[1],
@@ -279,7 +284,7 @@ var VirtualList = function (_Vue) {
                 _this2.scrollBarTop = scrollBarTop;
             }));
             // 滚动触发加载
-            var scrolling$ = combineLatest(scrollTop$, scrollDirection$).pipe(map(function (_ref16) {
+            var scrolling$ = combineLatest(this.scrollTop$, scrollDirection$).pipe(map(function (_ref16) {
                 var _ref17 = slicedToArray(_ref16, 2),
                     scrollTop = _ref17[0],
                     dir = _ref17[1];
@@ -320,7 +325,7 @@ var VirtualList = function (_Vue) {
 
                 return Math.ceil(ch / option.height) + (option.spare || 1);
             }), tap(function (count) {}));
-            var shouldUpdate$ = combineLatest(scrollTop$.pipe(map(function (scrollTop) {
+            var shouldUpdate$ = combineLatest(this.scrollTop$.pipe(map(function (scrollTop) {
                 return scrollTop;
             })), this.list$, options$, actualRows$).pipe(
             // 计算当前列表中最顶部的索引
