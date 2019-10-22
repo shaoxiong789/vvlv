@@ -109,6 +109,16 @@ var taggedTemplateLiteral = function (strings, raw) {
   }));
 };
 
+var toConsumableArray = function (arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+    return arr2;
+  } else {
+    return Array.from(arr);
+  }
+};
+
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use
@@ -163,6 +173,11 @@ var VirtualList = function (_Vue) {
         _this.scrollBarTop = 0;
         _this.scrollBarDuring = 0;
         _this.scrollTop$ = new rxjs.BehaviorSubject(0);
+        _this.cacheList = [];
+        _this.pagination = {
+            page: 1,
+            pageSize: 20
+        };
         return _this;
     }
 
@@ -170,7 +185,7 @@ var VirtualList = function (_Vue) {
         key: 'listChange',
         value: function listChange(val) {
             if (val && val.length > 0) {
-                this.list$.next(this.list);
+                this.list$.next(val);
             } else {
                 this.scrollTop$.next(0);
             }
@@ -180,7 +195,6 @@ var VirtualList = function (_Vue) {
         value: function mounted() {
             var _this2 = this;
 
-            this.list$.next(this.list);
             // 数据加载完毕后，对快照查漏补缺
             this.subscription.add(this.list$.pipe(operators.pairwise(), operators.tap(function (_ref) {
                 var _ref2 = slicedToArray(_ref, 2),
@@ -312,7 +326,12 @@ var VirtualList = function (_Vue) {
                     return dir > 0 && scrollHeight - (scrollTop + ch) < ch * 1;
                 }), operators.filter(function (state) {
                     if (state && !pullUpping) {
-                        _this2.pullUpLoad && _this2.pullUpLoad().then(function () {
+                        _this2.pullUpLoad && _this2.pullUpLoad({ pagination: _this2.pagination }).then(function (list) {
+                            var _cacheList;
+
+                            (_cacheList = _this2.cacheList).push.apply(_cacheList, toConsumableArray(list));
+                            _this2.list$.next(_this2.cacheList);
+                            _this2.pagination.page += 1;
                             pullUpping = false;
                         });
                     }
@@ -415,6 +434,26 @@ var VirtualList = function (_Vue) {
             }));
         }
     }, {
+        key: 'refresh',
+        value: function refresh() {
+            var _this3 = this;
+
+            this.pagination = {
+                page: 1,
+                pageSize: 20
+            };
+            var virtualListElm = this.virtualListRef.elm;
+            virtualListElm.scrollTop = 0;
+            this.pullUpLoad && this.pullUpLoad({ pagination: this.pagination }).then(function (list) {
+                var _cacheList2;
+
+                _this3.cacheList = [];
+                (_cacheList2 = _this3.cacheList).push.apply(_cacheList2, toConsumableArray(list));
+                _this3.list$.next(_this3.cacheList);
+                _this3.pagination.page += 1;
+            });
+        }
+    }, {
         key: 'getDifferenceIndexes',
         value: function getDifferenceIndexes(slice, firstIndex, lastIndex) {
             var indexes = [];
@@ -428,7 +467,7 @@ var VirtualList = function (_Vue) {
     }, {
         key: 'render',
         value: function render(h) {
-            var _this3 = this;
+            var _this4 = this;
 
             this.virtualListRef = h(
                 'div',
@@ -444,7 +483,7 @@ var VirtualList = function (_Vue) {
                                     width: '100%',
                                     transform: 'translateY(' + data.$pos + 'px)'
                                 } },
-                            [_this3.$scopedSlots.default(data.origin)]
+                            [_this4.$scopedSlots.default(data.origin)]
                         );
                     })]
                 )]
@@ -467,14 +506,15 @@ var VirtualList = function (_Vue) {
     return VirtualList;
 }(vuePropertyDecorator.Vue);
 __decorate([vuePropertyDecorator.Prop({
-    required: true,
+    required: false,
     default: function _default() {
         return [];
     }
 })], VirtualList.prototype, "list", void 0);
 __decorate([vuePropertyDecorator.Prop()], VirtualList.prototype, "options", void 0);
 __decorate([vuePropertyDecorator.Watch('list', {
-    deep: true
+    deep: true,
+    immediate: true
 })], VirtualList.prototype, "listChange", null);
 __decorate([vuePropertyDecorator.Prop()], VirtualList.prototype, "pullUpLoad", void 0);
 VirtualList = __decorate([vuePropertyDecorator.Component({
