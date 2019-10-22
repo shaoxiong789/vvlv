@@ -3,6 +3,7 @@ import {of, defer, fromEvent, BehaviorSubject, Subscription, combineLatest } fro
 import { map, distinctUntilChanged, tap, debounceTime, skipWhile, startWith, filter, withLatestFrom, pairwise, takeWhile } from 'rxjs/operators'
 import { VNode, CreateElement } from 'vue';
 import styled from 'vue-styled-components';
+import _ from 'lodash'
 
 interface IVirtualListOptions {
   height: number
@@ -100,6 +101,9 @@ export default class VirtualList extends Vue {
 
   @Prop()
   pullUpLoad?: Function;
+
+  @Prop()
+  sourceHandle?: Function;
 
   pagination = {
     page: 1,
@@ -281,7 +285,11 @@ export default class VirtualList extends Vue {
           if(state && !pullUpping) {
             this.pullUpLoad && this.pullUpLoad({ pagination: this.pagination }).then((list:any[]) => {
               this.cacheList.push(...list);
-              this.list$.next(this.cacheList)
+              if(this.sourceHandle) {
+                this.list$.next(this.sourceHandle(this.cacheList))
+              } else {
+                this.list$.next(this.cacheList)
+              }
               this.pagination.page+=1;
               pullUpping = false
             })
@@ -392,8 +400,19 @@ export default class VirtualList extends Vue {
     this.pullUpLoad && this.pullUpLoad({ pagination: this.pagination }).then((list:any[]) => {
       this.cacheList = []
       this.cacheList.push(...list);
-      this.list$.next(this.cacheList)
+      if(this.sourceHandle) {
+        this.list$.next(this.sourceHandle(this.cacheList))
+      } else {
+        this.list$.next(this.cacheList)
+      }
       this.pagination.page+=1;
+    })
+  }
+
+  delete(item, key) {
+    _.remove(this.cacheList, (el) => {
+      console.log(el)
+      return el[key] == item[key]
     })
   }
 

@@ -8,6 +8,7 @@ var vuePropertyDecorator = require('vue-property-decorator');
 var rxjs = require('rxjs');
 var operators = require('rxjs/operators');
 var styled = _interopDefault(require('vue-styled-components'));
+var _ = _interopDefault(require('lodash'));
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
   return typeof obj;
@@ -330,7 +331,11 @@ var VirtualList = function (_Vue) {
                             var _cacheList;
 
                             (_cacheList = _this2.cacheList).push.apply(_cacheList, toConsumableArray(list));
-                            _this2.list$.next(_this2.cacheList);
+                            if (_this2.sourceHandle) {
+                                _this2.list$.next(_this2.sourceHandle(_this2.cacheList));
+                            } else {
+                                _this2.list$.next(_this2.cacheList);
+                            }
                             _this2.pagination.page += 1;
                             pullUpping = false;
                         });
@@ -449,8 +454,20 @@ var VirtualList = function (_Vue) {
 
                 _this3.cacheList = [];
                 (_cacheList2 = _this3.cacheList).push.apply(_cacheList2, toConsumableArray(list));
-                _this3.list$.next(_this3.cacheList);
+                if (_this3.sourceHandle) {
+                    _this3.list$.next(_this3.sourceHandle(_this3.cacheList));
+                } else {
+                    _this3.list$.next(_this3.cacheList);
+                }
                 _this3.pagination.page += 1;
+            });
+        }
+    }, {
+        key: 'delete',
+        value: function _delete(item, key) {
+            _.remove(this.cacheList, function (el) {
+                console.log(el);
+                return el[key] == item[key];
             });
         }
     }, {
@@ -517,6 +534,7 @@ __decorate([vuePropertyDecorator.Watch('list', {
     immediate: true
 })], VirtualList.prototype, "listChange", null);
 __decorate([vuePropertyDecorator.Prop()], VirtualList.prototype, "pullUpLoad", void 0);
+__decorate([vuePropertyDecorator.Prop()], VirtualList.prototype, "sourceHandle", void 0);
 VirtualList = __decorate([vuePropertyDecorator.Component({
     components: {
         scrollBarWarp: styled.div(_templateObject),
