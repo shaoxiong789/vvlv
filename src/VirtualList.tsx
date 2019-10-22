@@ -35,12 +35,12 @@ interface IVirtualListOptions {
 export default class VirtualList extends Vue {
 
   @Prop({
-    required: true,
+    required: false,
     default() {
       return [];
     }
   })
-  list!: Array<any>;
+  list?: Array<any>;
 
   @Prop()
   options!: IVirtualListOptions;
@@ -85,22 +85,28 @@ export default class VirtualList extends Vue {
 
 
   @Watch('list', {
-    deep: true
+    deep: true,
+    immediate: true
   })
   listChange(val) {
     if(val && val.length > 0) {
-      this.list$.next(this.list)
+      this.list$.next(val)
     } else {
       this.scrollTop$.next(0);
     }
   }
 
+  cacheList:any[] = []
+
   @Prop()
   pullUpLoad?: Function;
 
-  mounted() {
-    this.list$.next(this.list)
+  pagination = {
+    page: 1,
+    pageSize: 20
+  }
 
+  mounted() {
     // 数据加载完毕后，对快照查漏补缺
     this.subscription.add(
       this.list$.pipe(
@@ -273,7 +279,10 @@ export default class VirtualList extends Vue {
         }),
         filter((state) => {
           if(state && !pullUpping) {
-            this.pullUpLoad && this.pullUpLoad().then(() => {
+            this.pullUpLoad && this.pullUpLoad({ pagination: this.pagination }).then((list:any[]) => {
+              this.cacheList.push(...list);
+              this.list$.next(this.cacheList)
+              this.pagination.page+=1;
               pullUpping = false
             })
           }
@@ -369,6 +378,23 @@ export default class VirtualList extends Vue {
           this.scrollHeight = scrollHeight
         })
     )
+  }
+
+  refresh() {
+    this.pagination = {
+      page: 1,
+      pageSize: 20
+    }
+    const virtualListElm = this.virtualListRef.elm as HTMLElement
+
+    virtualListElm.scrollTop = 0
+
+    this.pullUpLoad && this.pullUpLoad({ pagination: this.pagination }).then((list:any[]) => {
+      this.cacheList = []
+      this.cacheList.push(...list);
+      this.list$.next(this.cacheList)
+      this.pagination.page+=1;
+    })
   }
 
   private getDifferenceIndexes(slice: Array<any>, firstIndex: number, lastIndex: number): number[] {
